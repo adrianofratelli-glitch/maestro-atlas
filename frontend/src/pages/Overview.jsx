@@ -36,7 +36,7 @@ export default function Overview({ clusters }) {
 
   return (
     <>
-      <div className="page-head"><Leaf size={26} /><H1 style={{ color: '#fafafa' }}>Visão Geral</H1></div>
+      <div className="page-head"><Leaf size={26} /><H1 style={{ color: 'var(--text-pri)' }}>Visão Geral</H1></div>
 
       <KpiGrid>
         <Kpi label="Total Clusters" value={clusters.length} delta={`${dedic.length} dedicados`} />
@@ -57,7 +57,7 @@ export default function Overview({ clusters }) {
         <Badge variant="lightgray">{[...new Set(clusters.map(c => c.cluster_type))].join(' · ')}</Badge>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24 }}>
+      <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 24 }}>
         {/* Fleet */}
         <div>
           <Section title="Frota de Clusters" badge={String(clusters.length)} />
@@ -65,8 +65,8 @@ export default function Overview({ clusters }) {
             <div key={`${c.project_id}:${c.cluster_name}`} className="fleet-card" style={{ borderLeft: `3px solid ${dotColor(c.status)}` }}>
               <StatusDot status={c.status} />
               <div style={{ flex: 1 }}>
-                <div className="mono" style={{ fontWeight: 700, color: '#fafafa' }}>{c.cluster_name}</div>
-                <div style={{ fontSize: 11, color: '#7fa8bc', marginTop: 2 }}>{c.tier} · {c.region_pretty} · MongoDB {c.mongo_version}</div>
+                <div className="mono" style={{ fontWeight: 700, color: 'var(--text-pri)' }}>{c.cluster_name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{c.tier} · {c.region_pretty} · MongoDB {c.mongo_version}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div className="mono" style={{ fontSize: 11, fontWeight: 700, color: dotColor(c.status) }}>{c.status}</div>
@@ -83,10 +83,10 @@ export default function Overview({ clusters }) {
             {byProject.map((p, i) => (
               <div key={i} style={{ marginBottom: 14 }}>
                 <div className="row" style={{ justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ fontSize: 13, color: '#fafafa' }}>{p.name} <span style={{ color: '#6b94a8', fontSize: 11 }}>· {p.count} cluster(s)</span></span>
+                  <span style={{ fontSize: 13, color: 'var(--text-pri)' }}>{p.name} <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>· {p.count} cluster(s)</span></span>
                   <span className="mono" style={{ fontSize: 13, color: '#00ED64' }}>${fmt(p.cost)}</span>
                 </div>
-                <div style={{ height: 8, background: '#00141d', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: 8, background: 'var(--bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ width: `${(p.cost / maxCost) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#00A35C,#00ED64)' }} />
                 </div>
               </div>
@@ -95,7 +95,7 @@ export default function Overview({ clusters }) {
         </div>
       </div>
 
-      <div style={{ fontSize: 12, color: '#6b94a8', marginTop: 20 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 20 }}>
         💡 Métricas vivas (CPU, conexões, IOPS) ficam sob demanda nas abas <b>Scale</b>, <b>Health Score</b> e <b>FinOps</b> — para manter a Visão Geral rápida.
         Custos são <b>estimativas de tabela</b> (AWS us-east-1) — a fatura real está na aba <b>FinOps</b>.
       </div>

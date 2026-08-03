@@ -3,6 +3,9 @@
 # Cleans up leftovers from previous runs and auto-detects free ports.
 cd "$(dirname "$0")"
 
+# Activate venv (script relied on global python/pip, which don't exist on this machine)
+[ -f venv/bin/activate ] && source venv/bin/activate
+
 # Load .env
 if [ -f .env ]; then export $(grep -v '^#' .env | xargs); echo "Loaded .env"; fi
 

@@ -87,7 +87,7 @@ export default function Profiler({ clusters, config }) {
 
   return (
     <>
-      <div className="page-head"><H1 style={{ color: '#fafafa' }}>Query Profiler</H1></div>
+      <div className="page-head"><H1 style={{ color: 'var(--text-pri)' }}>Query Profiler</H1></div>
       <div className="row" style={{ marginBottom: 18 }}>
         <ClusterPicker clusters={clusters} value={sel} onChange={setSel} />
         <Button variant="primary" onClick={load} disabled={busy}>{busy ? 'Buscando…' : '🔍 Carregar Slow Queries'}</Button>
@@ -107,14 +107,14 @@ export default function Profiler({ clusters, config }) {
 
           {/* Filters + sorting */}
           <div className="row" style={{ marginBottom: 12 }}>
-            <span style={{ fontSize: 12, color: '#7fa8bc' }}>Filtrar:</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Filtrar:</span>
             {['all', 'read', 'write', 'collscan'].map(f => (
               <button key={f} onClick={() => setFilter(f)} className="chip" data-active={filter === f}>
                 {f === 'all' ? 'Todas' : f === 'read' ? '📖 Leitura' : f === 'write' ? '✏️ Escrita' : '🔴 COLLSCAN'}
               </button>
             ))}
             <span className="spacer" />
-            <span style={{ fontSize: 12, color: '#7fa8bc' }}>Ordenar:</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Ordenar:</span>
             <button onClick={() => setSort('dur')} className="chip" data-active={sort === 'dur'}>Latência</button>
             <button onClick={() => setSort('count')} className="chip" data-active={sort === 'count'}>Execuções</button>
           </div>
@@ -147,12 +147,12 @@ export default function Profiler({ clusters, config }) {
                       </td>
                       <td className="mono">{r.count.toLocaleString('pt-BR')}×</td>
                       <td className="mono">{r.maxDur.toLocaleString('pt-BR')} / {r.avgDur.toLocaleString('pt-BR')}ms</td>
-                      <td className="mono" style={{ color: '#7fa8bc' }}>{r.docs.toLocaleString('pt-BR')}</td>
+                      <td className="mono" style={{ color: 'var(--text-muted)' }}>{r.docs.toLocaleString('pt-BR')}</td>
                       <td><Button size="xsmall" onClick={() => { setOpen(open === key ? null : key); setExpl(null) }}>{open === key ? 'fechar' : '🔬 plano'}</Button></td>
                     </tr>
                     {open === key && (
-                      <tr><td colSpan={7} style={{ background: '#00141d', padding: 16 }}>
-                        <div style={{ fontSize: 11, color: '#6b94a8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Plano de execução capturado (slow query log)</div>
+                      <tr><td colSpan={7} style={{ background: 'var(--bg-secondary)', padding: 16 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Plano de execução capturado (slow query log)</div>
                         <div className="mono" style={{ fontSize: 12, color: '#C3E7DD', display: 'flex', gap: 28, flexWrap: 'wrap', marginBottom: 12 }}>
                           <span>plano: <b style={{ color: r.planRaw.includes('COLLSCAN') ? '#ef4444' : '#00ED64' }}>{r.planRaw}</b></span>
                           <span>docs examinados: <b>{r.docs.toLocaleString('pt-BR')}</b></span>
@@ -167,7 +167,7 @@ export default function Profiler({ clusters, config }) {
                           </Badge>
                           {ratioBad && <span style={{ fontSize: 12, color: '#ef4444', marginLeft: 10 }}>← índice provavelmente faltando</span>}
                         </div>
-                        <div style={{ fontSize: 11, color: '#6b94a8', marginBottom: 4 }}>Query / comando:</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Query / comando:</div>
                         <pre style={{ margin: 0, maxHeight: 200 }}>{JSON.stringify(r.filter, null, 2)}</pre>
                         {config.mongodb && sel.is_uri_target && r.kind === 'read' && !Array.isArray(r.filter) && (
                           <div style={{ marginTop: 12 }}>

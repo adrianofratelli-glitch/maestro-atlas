@@ -6,7 +6,7 @@ import { KpiGrid, Kpi, Section } from '../components.jsx'
 import { getFinops, getInvoice } from '../api.js'
 
 const fmt = (n) => Math.round(n).toLocaleString('pt-BR')
-const COLOR = { green: '#00ED64', yellow: '#f97316', red: '#ef4444', muted: '#7fa8bc' }
+const COLOR = { green: '#00ED64', yellow: '#FFC010', red: '#FF6960', muted: '#889397' }
 const VAR = { green: 'green', yellow: 'yellow', red: 'red', muted: 'lightgray' }
 
 export default function FinOps({ clusters }) {
@@ -34,7 +34,7 @@ export default function FinOps({ clusters }) {
 
   return (
     <>
-      <div className="page-head"><H1 style={{ color: '#fafafa' }}>FinOps</H1></div>
+      <div className="page-head"><H1 style={{ color: 'var(--text-pri)' }}>FinOps</H1></div>
       <KpiGrid>
         <Kpi label="Fatura Corrente" value={invoice == null ? '—' : `$${fmt(invoice)}`}
              delta="real · Atlas Billing API" color="#00ED64" />
@@ -49,7 +49,7 @@ export default function FinOps({ clusters }) {
       {!busy && <Banner variant={verdict.variant} style={{ marginBottom: 18 }}>{verdict.text}</Banner>}
 
       <Section title="Eficiência por Cluster" sub="custo estimado vs CPU média das últimas 24h" />
-      {busy && <Body style={{ color: '#7fa8bc' }}>Avaliando utilização dos clusters (24h)…</Body>}
+      {busy && <Body style={{ color: 'var(--text-muted)' }}>Avaliando utilização dos clusters (24h)…</Body>}
       {!busy && (
         <table className="mdb">
           <thead><tr><th>Projeto</th><th>Cluster</th><th>Tier</th><th>CPU méd. 24h</th><th style={{ textAlign: 'right' }}>USD/Mês (est.)</th><th>Veredito</th></tr></thead>
@@ -59,7 +59,7 @@ export default function FinOps({ clusters }) {
                 <td>{c.project}</td>
                 <td className="mono" style={{ color: '#00ED64' }}>{c.cluster}</td>
                 <td className="mono">{c.tier}</td>
-                <td className="mono" style={{ color: c.cpu == null ? '#6b94a8' : COLOR[c.color] }}>{c.cpu == null ? '—' : `${c.cpu}%`}</td>
+                <td className="mono" style={{ color: c.cpu == null ? 'var(--text-muted)' : COLOR[c.color] }}>{c.cpu == null ? '—' : `${c.cpu}%`}</td>
                 <td className="mono" style={{ textAlign: 'right' }}>${fmt(c.cost_usd)}</td>
                 <td><Badge variant={VAR[c.color]}>{c.verdict}</Badge></td>
               </tr>

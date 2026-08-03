@@ -30,9 +30,9 @@ export default function Compare({ clusters }) {
 
   const Sel = ({ v, set, label }) => (
     <div>
-      <div style={{ fontSize: 12, color: '#7fa8bc', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{label}</div>
       <select className="mono" value={clusterKey(v)} onChange={e => set(clusters.find(c => clusterKey(c) === e.target.value))}
-        style={{ background: '#003345', color: '#fafafa', border: '1px solid rgba(0,237,100,0.25)', borderRadius: 6, padding: '8px 12px', minWidth: 220 }}>
+        style={{ background: 'var(--bg-card)', color: 'var(--text-pri)', border: '1px solid var(--border-accent)', borderRadius: 6, padding: '8px 12px', minWidth: 220 }}>
         {clusters.map(c => <option key={clusterKey(c)} value={clusterKey(c)}>{c.project_name} / {c.cluster_name}</option>)}
       </select>
     </div>
@@ -87,7 +87,7 @@ export default function Compare({ clusters }) {
 
   return (
     <>
-      <div className="page-head"><H1 style={{ color: '#fafafa' }}>Comparar Clusters</H1></div>
+      <div className="page-head"><H1 style={{ color: 'var(--text-pri)' }}>Comparar Clusters</H1></div>
       <div className="row" style={{ marginBottom: 18, alignItems: 'flex-end' }}>
         <Sel v={a} set={setA} label="🔵 Cluster A" />
         <Sel v={b} set={setB} label="🟠 Cluster B" />
@@ -112,10 +112,10 @@ export default function Compare({ clusters }) {
                 const w = winner(va, vb, better)
                 return (
                   <tr key={i}>
-                    <td style={{ color: '#7fa8bc' }}>{m}</td>
-                    <td className="mono" style={{ color: w < 0 ? '#00ED64' : '#fafafa', fontWeight: w < 0 ? 700 : 400 }}>{w < 0 ? '🏆 ' : ''}{fmt(va)}</td>
-                    <td className="mono" style={{ color: w > 0 ? '#00ED64' : '#fafafa', fontWeight: w > 0 ? 700 : 400 }}>{w > 0 ? '🏆 ' : ''}{fmt(vb)}</td>
-                    <td style={{ fontSize: 12, color: '#7fa8bc' }}>
+                    <td style={{ color: 'var(--text-muted)' }}>{m}</td>
+                    <td className="mono" style={{ color: w < 0 ? '#00ED64' : 'var(--text-pri)', fontWeight: w < 0 ? 700 : 400 }}>{w < 0 ? '🏆 ' : ''}{fmt(va)}</td>
+                    <td className="mono" style={{ color: w > 0 ? '#00ED64' : 'var(--text-pri)', fontWeight: w > 0 ? 700 : 400 }}>{w > 0 ? '🏆 ' : ''}{fmt(vb)}</td>
+                    <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       {better === null ? '—' : w === 0 ? 'empate' : `${w < 0 ? data.a.cluster_name : data.b.cluster_name} (${better === 'low' ? 'menor é melhor' : 'maior é melhor'})`}
                     </td>
                   </tr>

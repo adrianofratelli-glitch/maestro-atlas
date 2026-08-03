@@ -1,20 +1,22 @@
 /* styles.css — Torre · visual "MongoDB pitch" (navy + green glow) */
 :root {
   --bg-primary: #001E2B;
-  --bg-secondary: #002838;
-  --bg-card: #003345;
-  --bg-card-hover: #004058;
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  --bg-secondary: #112733;
+  --bg-card: #1C2D38;
+  --bg-card-hover: #263C49;
+  --border-subtle: #3D4F58;
   --border-accent: rgba(0, 237, 100, 0.25);
-  --text-pri: #fafafa;
-  --text-sec: #b8d8e8;
-  --text-muted: #7fa8bc;
+  --text-pri: #E8EDEB;
+  --text-sec: #C1C7C6;
+  --text-muted: #889397;
   --accent: #00ED64;
-  --accent-glow: rgba(0, 237, 100, 0.15);
-  --orange: #f97316;
-  --purple: #a855f7;
-  --cyan: #06b6d4;
-  --teal: #14b8a6;
+  --accent-glow: rgba(0, 237, 100, 0.1);
+  --link: #0498EC;
+  --orange: #FFC010;
+  --purple: #B45AF2;
+  --cyan: #0498EC;
+  --teal: #00A35C;
+  color-scheme: dark;
   /* legacy aliases */
   --mdb-bg: var(--bg-primary);
   --mdb-surface: var(--bg-secondary);
@@ -64,7 +66,8 @@ h1, h2, h3, h4, h5, h6, p, button, input, select, textarea, td, th, li, a, label
   font-family: 'JetBrains Mono', ui-monospace, 'Source Code Pro', monospace !important;
 }
 
-::selection { background: rgba(0,237,100,0.25); }
+::selection { color: var(--text-pri); background: rgba(0,237,100,0.24); }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 6px; }
@@ -100,6 +103,8 @@ h1, h2, h3, h4, h5, h6, p, button, input, select, textarea, td, th, li, a, label
   box-shadow: inset 2px 0 0 var(--accent);
   font-weight: 600;
 }
+.sidenav-item svg { color: currentColor; opacity: .78; }
+.sidenav-item.active svg { opacity: 1; }
 .sidenav-section {
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.14em;
@@ -161,6 +166,8 @@ h1, h2, h3, h4, h5, h6, p, button, input, select, textarea, td, th, li, a, label
 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 .two-col { display: grid; grid-template-columns: 3fr 2fr; gap: 24px; }
+.responsive-two-col { display: grid; grid-template-columns: 1fr 1fr; }
+.responsive-four-col { display: grid; grid-template-columns: repeat(4, 1fr); }
 
 /* ── Section label (pitch-style eyebrow) ── */
 .section-title {
@@ -211,7 +218,7 @@ table.mdb tr:hover td { background: rgba(0,237,100,0.04); }
 .chat-msg { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
 .chat-msg.user { border-left: 3px solid var(--text-muted); }
 .chat-msg.assistant { border-left: 3px solid var(--accent); }
-pre { background: #00141d; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px; overflow-x: auto; color: var(--accent); font-size: 12px; }
+pre { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px; overflow-x: auto; color: var(--accent); font-size: 12px; }
 
 .suggestion-card {
   text-align: left;
@@ -243,13 +250,13 @@ pre { background: #00141d; border: 1px solid var(--border-subtle); border-radius
 .md p { margin: 8px 0; }
 .md ul, .md ol { margin: 8px 0; padding-left: 22px; }
 .md li { margin: 4px 0; }
-.md code { background: #00141d; border: 1px solid var(--border-subtle); border-radius: 5px; padding: 1px 6px; font-size: 12px; color: var(--accent); }
-.md pre { background: #00141d; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px; overflow-x: auto; margin: 10px 0; }
+.md code { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 5px; padding: 1px 6px; font-size: 12px; color: var(--accent); }
+.md pre { background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px; overflow-x: auto; margin: 10px 0; }
 .md pre code { background: none; border: none; padding: 0; color: var(--text-sec); }
 .md table { border-collapse: collapse; margin: 10px 0; width: 100%; }
 .md th, .md td { border: 1px solid var(--border-subtle); padding: 6px 12px; font-size: 12px; text-align: left; }
 .md th { background: var(--bg-secondary); color: var(--accent); font-family: 'JetBrains Mono', monospace !important; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
-.md a { color: var(--accent); }
+.md a { color: var(--link); }
 .md strong { color: var(--text-pri); }
 .md blockquote { border-left: 3px solid var(--accent); margin: 8px 0; padding: 4px 14px; color: var(--text-muted); }
 
@@ -263,3 +270,48 @@ pre { background: #00141d; border: 1px solid var(--border-subtle); border-radius
 }
 .chip:hover { color: var(--text-pri); border-color: rgba(255,255,255,0.15); }
 .chip[data-active="true"] { background: var(--accent-glow); color: var(--accent); border-color: var(--border-accent); }
+
+@media (max-width: 900px) {
+  .app-shell { flex-direction: column; }
+  .sidenav {
+    width: 100%;
+    height: auto;
+    min-height: 64px;
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    padding: 10px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .sidenav-brand { flex: 0 0 auto; padding: 0 16px 0 2px; }
+  .sidenav-section, .sidenav .spacer, .sidenav > .mono { display: none; }
+  .sidenav-item { flex: 0 0 auto; width: auto; white-space: nowrap; }
+  .main { width: 100%; max-width: none; padding: 26px 24px 40px; }
+  .two-col { grid-template-columns: 1fr; }
+  .responsive-four-col { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 640px) {
+  .main { padding: 22px 16px 32px; }
+  .page-head { align-items: flex-start; margin-bottom: 20px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  table.mdb { display: block; overflow-x: auto; white-space: nowrap; }
+  .bubble { gap: 8px; }
+  .bubble-avatar { width: 28px; height: 28px; }
+  .bubble-body { padding: 12px 14px; }
+  .responsive-two-col,
+  .responsive-four-col { grid-template-columns: 1fr !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

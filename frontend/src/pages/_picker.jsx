@@ -10,7 +10,7 @@ export function ClusterPicker({ clusters, value, onChange }) {
       value={clusterKey(value)}
       onChange={e => onChange(clusters.find(c => clusterKey(c) === e.target.value))}
       style={{
-        background: '#003345', color: '#fafafa', border: '1px solid rgba(0,237,100,0.25)',
+        background: 'var(--bg-card)', color: 'var(--text-pri)', border: '1px solid var(--border-accent)',
         borderRadius: 6, padding: '8px 12px', fontSize: 13, minWidth: 220,
       }}
     >

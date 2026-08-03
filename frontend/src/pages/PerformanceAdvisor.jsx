@@ -44,7 +44,7 @@ export default function PerformanceAdvisor({ clusters, config }) {
   const suggestions = data?.suggestedIndexes || []
   return (
     <>
-      <div className="page-head"><H1 style={{ color: '#fafafa' }}>Performance Advisor</H1></div>
+      <div className="page-head"><H1 style={{ color: 'var(--text-pri)' }}>Performance Advisor</H1></div>
       <div className="row" style={{ marginBottom: 18 }}>
         <ClusterPicker clusters={clusters} value={sel} onChange={setSel} />
         <Button variant="primary" onClick={load} disabled={busy}>{busy ? 'Consultando…' : '🔍 Buscar Recomendações'}</Button>

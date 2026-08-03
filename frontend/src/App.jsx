@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { H3, Body } from '@leafygreen-ui/typography'
 import Banner from '@leafygreen-ui/banner'
+import Icon from '@leafygreen-ui/icon'
 import { Leaf } from './components.jsx'
 import { getConfig, getClusters } from './api.js'
 
@@ -16,18 +17,18 @@ import Chat from './pages/Chat.jsx'
 
 const NAV = [
   { section: 'Principal' },
-  { id: 'overview', label: 'Visão Geral', icon: '📊', Comp: Overview },
-  { id: 'clusters', label: 'Clusters', icon: '🗄️', Comp: Clusters },
+  { id: 'overview', label: 'Visão Geral', icon: 'Dashboard', Comp: Overview },
+  { id: 'clusters', label: 'Clusters', icon: 'Database', Comp: Clusters },
   { section: 'Performance' },
-  { id: 'pa', label: 'Performance Advisor', icon: '⚡', Comp: PerformanceAdvisor },
-  { id: 'profiler', label: 'Query Profiler', icon: '🔍', Comp: Profiler },
-  { id: 'health', label: 'Health Score', icon: '❤️', Comp: Health },
+  { id: 'pa', label: 'Performance Advisor', icon: 'LightningBolt', Comp: PerformanceAdvisor },
+  { id: 'profiler', label: 'Query Profiler', icon: 'MagnifyingGlass', Comp: Profiler },
+  { id: 'health', label: 'Health Score', icon: 'Gauge', Comp: Health },
   { section: 'Operações' },
-  { id: 'scale', label: 'Scale', icon: '📈', Comp: Scale },
-  { id: 'finops', label: 'FinOps', icon: '💰', Comp: FinOps },
-  { id: 'compare', label: 'Compare', icon: '📊', Comp: Compare },
+  { id: 'scale', label: 'Scale', icon: 'Charts', Comp: Scale },
+  { id: 'finops', label: 'FinOps', icon: 'Coin', Comp: FinOps },
+  { id: 'compare', label: 'Compare', icon: 'Diagram', Comp: Compare },
   { section: 'IA' },
-  { id: 'chat', label: 'AI Chat', icon: '💬', Comp: Chat },
+  { id: 'chat', label: 'MongoDB Assistant', icon: 'Sparkle', Comp: Chat },
 ]
 
 export default function App() {
@@ -52,26 +53,26 @@ export default function App() {
         <div className="sidenav-brand">
           <Leaf size={28} />
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: '#fafafa' }}>Torre</div>
-            <div className="mono" style={{ fontSize: 9, color: '#5f869e', letterSpacing: 1.5 }}>ATLAS CONTROL PLANE</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-pri)' }}>Torre</div>
+            <div className="mono" style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1.5 }}>ATLAS CONTROL PLANE</div>
           </div>
         </div>
         {NAV.map((n, i) => n.section
           ? <div key={i} className="sidenav-section">{n.section}</div>
           : <button key={n.id} className={`sidenav-item ${active === n.id ? 'active' : ''}`} onClick={() => setActive(n.id)}>
-              <span>{n.icon}</span>{n.label}
+              <Icon glyph={n.icon} size="large" role="presentation" />{n.label}
             </button>
         )}
         <div className="spacer" />
         {config && (
-          <div className="mono" style={{ fontSize: 10, color: '#5f869e', padding: '8px 12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="mono" style={{ fontSize: 10, color: 'var(--text-muted)', padding: '8px 12px', borderTop: '1px solid var(--border-subtle)' }}>
             {config.atlas ? '🟢' : '🔴'} Atlas&nbsp;&nbsp;{config.anthropic ? '🟢' : '⚪'} Claude&nbsp;&nbsp;{config.mongodb ? '🟢' : '⚪'} Mongo
           </div>
         )}
       </nav>
 
       <main className="main">
-        {loading && <Body style={{ color: '#7fa8bc' }}>🍃 Conectando ao MongoDB Atlas…</Body>}
+        {loading && <Body style={{ color: 'var(--text-muted)' }}>Conectando ao MongoDB Atlas…</Body>}
         {error && <Banner variant="danger">Erro ao carregar: {error}</Banner>}
         {!loading && !error && config && (
           <div className="page-enter" key={active}>

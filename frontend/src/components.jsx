@@ -42,8 +42,8 @@ export function Empty({ icon, title, hint }) {
   return (
     <div className="empty">
       <div style={{ fontSize: 34, marginBottom: 8 }}>{icon}</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: '#fafafa', marginBottom: 6 }}>{title}</div>
-      <Body style={{ color: '#7fa8bc' }}>{hint}</Body>
+      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-pri)', marginBottom: 6 }}>{title}</div>
+      <Body style={{ color: 'var(--text-muted)' }}>{hint}</Body>
     </div>
   )
 }
@@ -65,7 +65,7 @@ export function MiniChart({ series, height = 160 }) {
   const areaCpu = `${lineCpu} L${x(n - 1)},${h - pad} L${x(0)},${h - pad} Z`
   const lineQ = q.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${yQ(v)}`).join(' ')
   return (
-    <div style={{ background: '#003345', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 12px' }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '10px 12px' }}>
       <div className="row" style={{ gap: 18, marginBottom: 6, fontSize: 11 }}>
         <span className="mono" style={{ color: '#00ED64' }}>● CPU % (máx {maxCpu.toFixed(0)})</span>
         <span className="mono" style={{ color: '#06b6d4' }}>● Queries/s (máx {maxQ.toFixed(0)})</span>

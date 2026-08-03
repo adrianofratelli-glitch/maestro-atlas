@@ -32,7 +32,7 @@ export default function Scale({ clusters, config }) {
 
   if (!sel) return (
     <>
-      <div className="page-head"><H1 style={{ color: '#fafafa' }}>Scale</H1></div>
+      <div className="page-head"><H1 style={{ color: 'var(--text-pri)' }}>Scale</H1></div>
       <Empty icon="📈" title="Nenhum cluster encontrado" hint="Verifique as credenciais do Atlas no servidor (.env) e recarregue a página." />
     </>
   )
@@ -52,7 +52,7 @@ export default function Scale({ clusters, config }) {
   const recColor = rec?.severity === 'high' ? 'danger' : rec?.severity === 'med' ? 'warning' : 'success'
   return (
     <>
-      <div className="page-head"><H1 style={{ color: '#fafafa' }}>Scale</H1></div>
+      <div className="page-head"><H1 style={{ color: 'var(--text-pri)' }}>Scale</H1></div>
       <div className="row" style={{ marginBottom: 16 }}>
         <ClusterPicker clusters={clusters} value={sel} onChange={setSel} />
       </div>
@@ -60,7 +60,7 @@ export default function Scale({ clusters, config }) {
       <KpiGrid>
         <Kpi label="Cluster" value={sel.cluster_name} color="#06b6d4" />
         <Kpi label="Tier Atual" value={sel.tier} color="#00A35C" />
-        <Kpi label="Região" value={sel.region_pretty} color="#7fa8bc" />
+        <Kpi label="Região" value={sel.region_pretty} color="#889397" />
         <Kpi label="Custo Est./Mês" value={`R$ ${sel.cost_brl.toLocaleString('pt-BR')}`} delta={`≈ USD ${sel.cost_usd.toLocaleString('pt-BR')} · tabela us-east-1`} />
       </KpiGrid>
 
@@ -72,7 +72,7 @@ export default function Scale({ clusters, config }) {
         <Badge variant={sel.autoscale_disk ? 'green' : 'lightgray'}>
           Auto-scaling disco: {sel.autoscale_disk ? 'ON' : 'OFF'}
         </Badge>
-        <span style={{ fontSize: 11, color: '#6b94a8' }}>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
           {sel.autoscale_compute
             ? 'O Atlas já escala este cluster automaticamente — este painel mostra os mesmos sinais que o auto-scaling avalia.'
             : 'O Atlas oferece auto-scaling nativo de compute e disco — este painel mostra o que ele avaliaria.'}
@@ -81,9 +81,9 @@ export default function Scale({ clusters, config }) {
 
       {/* ── Key metrics that govern scaling: CPU · Memory · Storage ── */}
       <Section title="Métricas de Scaling" sub="as 3 dimensões que definem o tier" />
-      {loading && <Body style={{ color: '#7fa8bc' }}>Analisando métricas do cluster…</Body>}
+      {loading && <Body style={{ color: 'var(--text-muted)' }}>Analisando métricas do cluster…</Body>}
       {rec?.metrics && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
+        <div className="responsive-four-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
           <MetricBar label="CPU" pct={rec.metrics.cpu_p95_24h ?? rec.metrics.cpu_pct}
                      sub={rec.metrics.cpu_p95_24h != null
                        ? `p95 24h ${rec.metrics.cpu_p95_24h}% · agora ${rec.metrics.cpu_pct}%`
@@ -108,7 +108,7 @@ export default function Scale({ clusters, config }) {
         </Banner>
       )}
       {rec && rec.action === 'ok' && (
-        <Body style={{ color: '#7fa8bc', fontSize: 13 }}>
+        <Body style={{ color: 'var(--text-muted)', fontSize: 13 }}>
           ✅ Sem necessidade imediata de scaling — você ainda pode simular cenários abaixo para planejar crescimento.
         </Body>
       )}
@@ -121,26 +121,26 @@ export default function Scale({ clusters, config }) {
       <Card className="panel" darkMode>
         <div className="row" style={{ alignItems: 'flex-end', gap: 18 }}>
           <div>
-            <div style={{ fontSize: 11, color: '#7fa8bc', marginBottom: 6 }}>Novo tier</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Novo tier</div>
             <select className="mono" value={newTier} onChange={e => { setNewTier(e.target.value); setConfirm(false); setMsg(null) }}
-              style={{ background: '#00141d', color: '#fafafa', border: '1px solid rgba(0,237,100,0.3)', borderRadius: 6, padding: '9px 14px', fontSize: 15 }}>
+              style={{ background: 'var(--bg-secondary)', color: 'var(--text-pri)', border: '1px solid var(--border-accent)', borderRadius: 6, padding: '9px 14px', fontSize: 15 }}>
               {tiers.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           {newTier !== sel.tier && (
             <>
-              <div style={{ fontSize: 22, color: '#6b94a8' }}>→</div>
+              <div style={{ fontSize: 22, color: 'var(--text-muted)' }}>→</div>
               <div>
-                <div style={{ fontSize: 11, color: '#7fa8bc', marginBottom: 6 }}>{direction}</div>
-                <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: '#fafafa' }}>
-                  R$ {Math.round(newUsd * usdBrl).toLocaleString('pt-BR')}<span style={{ fontSize: 12, color: '#7fa8bc' }}>/mês</span>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>{direction}</div>
+                <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-pri)' }}>
+                  R$ {Math.round(newUsd * usdBrl).toLocaleString('pt-BR')}<span style={{ fontSize: 12, color: 'var(--text-muted)' }}>/mês</span>
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: '#7fa8bc', marginBottom: 6 }}>Variação</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Variação</div>
                 <div className="mono" style={{ fontSize: 18, fontWeight: 700, color: deltaUsd >= 0 ? '#ef4444' : '#00ED64' }}>
                   {deltaUsd >= 0 ? '+' : ''}R$ {Math.round(deltaUsd * usdBrl).toLocaleString('pt-BR')}
-                  <span style={{ fontSize: 11, color: '#7fa8bc' }}> ({deltaUsd >= 0 ? '+' : ''}USD {deltaUsd.toLocaleString('pt-BR')})</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}> ({deltaUsd >= 0 ? '+' : ''}USD {deltaUsd.toLocaleString('pt-BR')})</span>
                 </div>
               </div>
               <div className="spacer" />
@@ -177,15 +177,15 @@ function MetricBar({ label, pct, sub, warn = 75, crit = 90 }) {
   const v = Math.max(0, Math.min(100, pct || 0))
   const color = v >= crit ? '#F87171' : v >= warn ? '#FACC15' : '#00ED64'
   return (
-    <div style={{ background: '#003345', border: '1px solid rgba(255,255,255,0.06)',
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
                   borderTop: `3px solid ${color}`, borderRadius: '0 0 8px 8px', padding: '14px 16px' }}>
       <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.2px',
-                    color: '#6b94a8', marginBottom: 8 }}>{label}</div>
+                    color: 'var(--text-muted)', marginBottom: 8 }}>{label}</div>
       <div className="mono" style={{ fontSize: 22, fontWeight: 700, color, lineHeight: 1 }}>{v}%</div>
-      <div style={{ height: 6, background: '#00141d', borderRadius: 3, overflow: 'hidden', margin: '8px 0 6px' }}>
+      <div style={{ height: 6, background: 'var(--bg-secondary)', borderRadius: 3, overflow: 'hidden', margin: '8px 0 6px' }}>
         <div style={{ width: `${v}%`, height: '100%', background: color }} />
       </div>
-      <div style={{ fontSize: 11, color: '#7fa8bc', fontFamily: "'IBM Plex Mono',monospace" }}>{sub}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'JetBrains Mono',ui-monospace,monospace" }}>{sub}</div>
     </div>
   )
 }
