@@ -5,12 +5,23 @@ ai_agent.py — Claude-powered MongoDB analysis + conversational chat
 import json
 import os
 import anthropic
+from functools import lru_cache
 from typing import Iterator
 
 import observability
 
 # Sonnet 5 = best cost/speed for the demo; override via .env (e.g. claude-opus-4-8)
 MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5")
+
+
+@lru_cache(maxsize=1)
+def _get_client() -> anthropic.Anthropic:
+    """Share one HTTP connection pool across analysis and chat requests."""
+    return anthropic.Anthropic(
+        api_key="dummy",
+        base_url=os.getenv("ANTHROPIC_BASE_URL"),
+        default_headers={"api-key": os.getenv("ANTHROPIC_API_KEY", "")},
+    )
 
 
 def _track_usage(usage) -> None:
@@ -97,11 +108,7 @@ Máximo 600 palavras. Foque em impacto de negócio."""
 def analyze_cluster_stream(cluster: dict, pa_data: dict, slow_queries: dict,
                            measurements: dict = None, cpu24: dict = None) -> Iterator[str]:
     """Streams a one-shot performance analysis."""
-    client = anthropic.Anthropic(
-        api_key="dummy",
-        base_url=os.getenv("ANTHROPIC_BASE_URL"),
-        default_headers={"api-key": os.getenv("ANTHROPIC_API_KEY", "")},
-    )
+    client = _get_client()
     with client.messages.stream(
         model=MODEL,
         max_tokens=1500,
@@ -140,6 +147,9 @@ _BASE_SYSTEM_PROMPT = (
     "- Use APENAS os dados reais fornecidos neste contexto. NUNCA invente métricas, índices ou queries.\n"
     "- Se um dado não estiver neste contexto, diga explicitamente que ele não está disponível "
     "e o que seria necessário para obtê-lo — NUNCA preencha a lacuna com um valor estimado.\n"
+    "- Se a pergunta estiver fora de MongoDB Atlas, não responda ao mérito nem diga apenas "
+    "'não sei': reconheça o limite em uma frase e ofereça análise de cluster, métricas, "
+    "Performance Advisor, Query Profiler, custo, health score ou sizing.\n"
     "- Se suggestedIndexes tiver 0 itens: informe que o PA não encontrou oportunidades e analise "
     "as slow queries para propor índices baseados nos padrões de acesso REAIS observados.\n"
     "- Distingua sempre: '**dados reais da API**' vs '**recomendação baseada em padrões**'.\n"
@@ -225,11 +235,7 @@ MAX_HISTORY_MESSAGES = 16
 
 def stream_chat(messages: list, system_prompt: str = "") -> Iterator[str]:
     """Streams a conversational Claude response, windowed history + cached system prompt."""
-    client = anthropic.Anthropic(
-        api_key="dummy",
-        base_url=os.getenv("ANTHROPIC_BASE_URL"),
-        default_headers={"api-key": os.getenv("ANTHROPIC_API_KEY", "")},
-    )
+    client = _get_client()
     if len(messages) > MAX_HISTORY_MESSAGES:
         messages = messages[-MAX_HISTORY_MESSAGES:]
         # The window must start on a user turn — a leading assistant message
@@ -410,4 +416,4 @@ def friendly_api_error(err: Exception) -> str:
     if isinstance(err, anthropic.APIConnectionError):
         return ("🌐 **Falha de conexão com a Anthropic.** "
                 "Verifique sua internet e tente novamente.")
-    return f"❌ **Erro ao chamar Claude:** {err}"
+    return "❌ **Erro inesperado ao chamar Claude.** Consulte os logs pelo request-id e tente novamente."

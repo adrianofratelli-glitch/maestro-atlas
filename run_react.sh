@@ -1,6 +1,6 @@
 #!/bin/bash
 # run_react.sh — start Torre (FastAPI + React/LeafyGreen).
-# Cleans up leftovers from previous runs and auto-detects free ports.
+# Uses portfolio-reserved ports and never stops an unrelated process.
 cd "$(dirname "$0")"
 
 # Activate venv (script relied on global python/pip, which don't exist on this machine)
@@ -9,19 +9,17 @@ cd "$(dirname "$0")"
 # Load .env
 if [ -f .env ]; then export $(grep -v '^#' .env | xargs); echo "Loaded .env"; fi
 
-# Kill old Torre instances only (leaves other local services untouched)
-pkill -f "uvicorn api:app" 2>/dev/null
-pkill -f "torre/frontend.*vite" 2>/dev/null
-# Generic vite process only if it belongs to this folder
-for pid in $(pgrep -f "vite" 2>/dev/null); do
-  if ps -o command= -p "$pid" 2>/dev/null | grep -q "torre"; then kill "$pid" 2>/dev/null; fi
-done
-sleep 1
+# These defaults are reserved for Torre in the workspace-wide port registry.
+export API_PORT="${API_PORT:-8765}"
+export WEB_PORT="${WEB_PORT:-5290}"
 
-# Find the first free port starting from a given value
-free_port() { local p=$1; while lsof -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; do p=$((p+1)); done; echo "$p"; }
-export API_PORT="${API_PORT:-$(free_port 8765)}"
-export WEB_PORT="${WEB_PORT:-$(free_port 5290)}"
+for port in "$API_PORT" "$WEB_PORT"; do
+  if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "Port $port is already in use; no process was stopped."
+    echo "Inspect it with: lsof -nP -iTCP:$port -sTCP:LISTEN"
+    exit 1
+  fi
+done
 
 # Backend dependencies
 if ! python -c "import fastapi" 2>/dev/null; then
@@ -33,10 +31,25 @@ echo "Backend  (API) -> http://localhost:$API_PORT"
 echo "Frontend (UI)  -> http://localhost:$WEB_PORT"
 echo "──────────────────────────────────────────────"
 
-uvicorn api:app --port "$API_PORT" --reload &
+UVICORN_ARGS=(api:app --port "$API_PORT")
+[ "${POV_DEV:-0}" = "1" ] && UVICORN_ARGS+=(--reload)
+uvicorn "${UVICORN_ARGS[@]}" &
 BACK=$!
-trap "kill $BACK 2>/dev/null; pkill -f 'uvicorn api:app' 2>/dev/null" EXIT
+trap 'kill "$BACK" 2>/dev/null' EXIT
 
 cd frontend
 [ -d node_modules ] || npm install --silent
-npm run dev
+if [ "${POV_DEV:-0}" != "1" ] && {
+  [ ! -f dist/index.html ] ||
+  [ -n "$(find src -type f -newer dist/index.html -print -quit)" ] ||
+  [ package-lock.json -nt dist/index.html ] ||
+  [ vite.config.js -nt dist/index.html ];
+}; then
+  echo "Building optimized frontend..."
+  npm run build
+fi
+if [ "${POV_DEV:-0}" = "1" ]; then
+  npm run dev -- --host 127.0.0.1 --port "$WEB_PORT" --strictPort
+else
+  npm run preview -- --host 127.0.0.1 --port "$WEB_PORT" --strictPort
+fi

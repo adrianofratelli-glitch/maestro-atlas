@@ -60,6 +60,8 @@ cp .env.example .env    # preencha as chaves
 ./run_react.sh          # API :8765, UI :5290
 ```
 
+O launcher usa backend sem reload e build otimizado do frontend por padrão. Para desenvolver com reload/HMR, rode `POV_DEV=1 ./run_react.sh`; o build só é refeito quando fontes, lockfile ou configuração mudam.
+
 ```env
 ATLAS_PUBLIC_KEY=
 ATLAS_PRIVATE_KEY=

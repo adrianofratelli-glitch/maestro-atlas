@@ -18,6 +18,7 @@ Structure:
 """
 
 from datetime import datetime, timezone
+import os
 from typing import List, Dict, Optional
 from bson import ObjectId
 from pymongo import MongoClient, TEXT, DESCENDING
@@ -25,6 +26,8 @@ from pymongo.collection import Collection
 
 DB_NAME   = "torre"
 COLL_NAME = "chat_history"
+CHAT_MAX_MESSAGES = max(2, int(os.getenv("CHAT_MAX_MESSAGES", "100")))
+CHAT_RETENTION_DAYS = max(0, int(os.getenv("CHAT_RETENTION_DAYS", "30")))
 
 _clients: dict = {}
 
@@ -67,6 +70,13 @@ def init_db(mongo_uri: str):
     if "cluster_idx" not in existing:
         coll.create_index([("cluster", DESCENDING)], name="cluster_idx")
 
+    if CHAT_RETENTION_DAYS and "updated_at_ttl" not in existing:
+        coll.create_index(
+            [("updated_at", 1)],
+            name="updated_at_ttl",
+            expireAfterSeconds=CHAT_RETENTION_DAYS * 86400,
+        )
+
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
 def new_conversation(mongo_uri: str, cluster: str = "") -> str:
@@ -92,7 +102,7 @@ def add_message(mongo_uri: str, conversation_id: str, role: str, content: str, e
     msg = {"role": role, "content": content, "elapsed_ms": elapsed_ms, "ts": now}
 
     update = {
-        "$push": {"messages": msg},
+        "$push": {"messages": {"$each": [msg], "$slice": -CHAT_MAX_MESSAGES}},
         "$set":  {"updated_at": now},
     }
 

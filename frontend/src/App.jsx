@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { H3, Body } from '@leafygreen-ui/typography'
 import Banner from '@leafygreen-ui/banner'
 import Icon from '@leafygreen-ui/icon'
 import { Leaf } from './components.jsx'
 import { getConfig, getClusters } from './api.js'
 
-import Overview from './pages/Overview.jsx'
-import Clusters from './pages/Clusters.jsx'
-import PerformanceAdvisor from './pages/PerformanceAdvisor.jsx'
-import Profiler from './pages/Profiler.jsx'
-import Scale from './pages/Scale.jsx'
-import FinOps from './pages/FinOps.jsx'
-import Compare from './pages/Compare.jsx'
-import Health from './pages/Health.jsx'
-import Chat from './pages/Chat.jsx'
+const Overview = lazy(() => import('./pages/Overview.jsx'))
+const Clusters = lazy(() => import('./pages/Clusters.jsx'))
+const PerformanceAdvisor = lazy(() => import('./pages/PerformanceAdvisor.jsx'))
+const Profiler = lazy(() => import('./pages/Profiler.jsx'))
+const Scale = lazy(() => import('./pages/Scale.jsx'))
+const FinOps = lazy(() => import('./pages/FinOps.jsx'))
+const Compare = lazy(() => import('./pages/Compare.jsx'))
+const Health = lazy(() => import('./pages/Health.jsx'))
+const Chat = lazy(() => import('./pages/Chat.jsx'))
 
 const NAV = [
   { section: 'Principal' },
@@ -76,7 +76,9 @@ export default function App() {
         {error && <Banner variant="danger">Erro ao carregar: {error}</Banner>}
         {!loading && !error && config && (
           <div className="page-enter" key={active}>
-            <Current clusters={clusters} config={config} />
+            <Suspense fallback={<Body style={{ color: 'var(--text-muted)' }}>Carregando módulo…</Body>}>
+              <Current clusters={clusters} config={config} />
+            </Suspense>
           </div>
         )}
       </main>

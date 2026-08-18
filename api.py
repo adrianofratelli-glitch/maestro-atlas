@@ -4,23 +4,24 @@ Exposes the Python logic (atlas_client / ai_agent / chat_memory) as a REST API
 for the React + LeafyGreen frontend to consume via axios.
 
 Credentials ALWAYS come from the environment (.env) — never from the frontend.
-Run with:  uvicorn api:app --reload --port 8000
+Run with:  uvicorn api:app --reload --port 8765
 """
 
 import json
+import hmac
 import logging
 import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
+from typing import Literal, Optional
 from uuid import uuid4
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+from pydantic import BaseModel, Field
 
 import observability
 from atlas_client import (
@@ -97,7 +98,9 @@ app = FastAPI(title="Torre Atlas Control Plane API", version="3.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(","),
+    allow_origins=os.getenv(
+        "CORS_ORIGINS", "http://localhost:5290,http://127.0.0.1:5290"
+    ).split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,8 +118,15 @@ _API_AUTH_TOKEN = os.getenv("API_AUTH_TOKEN", "")
 
 @app.middleware("http")
 async def _require_api_token(request, call_next):
-    if _API_AUTH_TOKEN and request.url.path.startswith("/api"):
-        if request.headers.get("authorization") != f"Bearer {_API_AUTH_TOKEN}":
+    public_operational_paths = {"/api/health", "/health/live"}
+    protected_path = request.url.path.startswith("/api") or request.url.path == "/metrics"
+    if (
+        _API_AUTH_TOKEN
+        and protected_path
+        and request.url.path not in public_operational_paths
+    ):
+        supplied = request.headers.get("authorization", "")
+        if not hmac.compare_digest(supplied, f"Bearer {_API_AUTH_TOKEN}"):
             return Response(status_code=401, content="Unauthorized")
     return await call_next(request)
 
@@ -144,9 +154,37 @@ def api_metrics():
     return observability.metrics.snapshot()
 
 
+@app.get("/metrics", include_in_schema=False)
+def prometheus_metrics():
+    return Response(observability.metrics.prometheus(), media_type="text/plain; version=0.0.4")
+
+
 @app.get("/api/health")
 def api_health():
-    return {"status": "ok"}
+    components = {"atlas_admin_api": "ready", "mongodb": "ready"}
+    try:
+        get_client().get_projects()
+    except Exception:
+        components["atlas_admin_api"] = "unavailable"
+        logger.warning("healthcheck Atlas Admin API unavailable", exc_info=True)
+    try:
+        uri = os.getenv("MONGODB_URI", "")
+        if not uri:
+            raise RuntimeError("MONGODB_URI ausente")
+        _mongo(uri).admin.command("ping")
+    except Exception:
+        components["mongodb"] = "unavailable"
+        logger.warning("healthcheck MongoDB unavailable", exc_info=True)
+    ready = all(value == "ready" for value in components.values())
+    return JSONResponse(
+        {"status": "ready" if ready else "degraded", "components": components},
+        status_code=200 if ready else 503,
+    )
+
+
+@app.get("/health/live")
+def api_liveness():
+    return {"status": "alive"}
 
 
 # ── MongoDB (cached client — connection pool reused across requests) ──────────
@@ -427,7 +465,7 @@ def scaling(project_id: str, cluster_name: str, tier: str):
 
 # ── Scale / Index (actions) ───────────────────────────────────────────────────
 class ScaleBody(BaseModel):
-    new_tier: str
+    new_tier: str = Field(..., min_length=3, max_length=16)
 
 @app.post("/api/cluster/{project_id}/{cluster_name}/scale")
 def scale(project_id: str, cluster_name: str, body: ScaleBody):
@@ -444,16 +482,16 @@ def scale(project_id: str, cluster_name: str, body: ScaleBody):
 # project_id/cluster_name are REQUIRED: optional fields would let a caller
 # bypass _assert_uri_targets simply by omitting them.
 class IndexBody(BaseModel):
-    namespace: str
-    index_keys: list
-    project_id: str
-    cluster_name: str
+    namespace: str = Field(..., min_length=3, max_length=255)
+    index_keys: list[dict[str, int | str]] = Field(..., min_length=1, max_length=10)
+    project_id: str = Field(..., min_length=1, max_length=128)
+    cluster_name: str = Field(..., min_length=1, max_length=128)
 
 class ExplainBody(BaseModel):
-    namespace: str
-    filter: dict = {}
-    project_id: str
-    cluster_name: str
+    namespace: str = Field(..., min_length=3, max_length=255)
+    filter: dict = Field(default_factory=dict)
+    project_id: str = Field(..., min_length=1, max_length=128)
+    cluster_name: str = Field(..., min_length=1, max_length=128)
 
 
 def _assert_uri_targets(project_id: Optional[str], cluster_name: Optional[str]):
@@ -461,17 +499,55 @@ def _assert_uri_targets(project_id: Optional[str], cluster_name: Optional[str]):
     the UI — otherwise the index/explain would silently run on the wrong cluster."""
     uri_hash = _uri_cluster_hash()
     if not (uri_hash and project_id and cluster_name):
-        return
+        raise HTTPException(
+            status_code=503,
+            detail="Não foi possível validar o cluster-alvo da operação.",
+        )
     try:
         cluster = get_client().get_cluster(project_id, cluster_name)
     except Exception:
         logger.exception("get_cluster failed project_id=%s cluster=%s", project_id, cluster_name)
-        return
+        raise HTTPException(
+            status_code=503,
+            detail="Atlas Admin API indisponível; operação recusada por segurança.",
+        )
     srv_hash = _cluster_srv_hash(cluster)
+    if not srv_hash:
+        raise HTTPException(
+            status_code=503,
+            detail="Atlas não retornou o endereço do cluster; operação recusada por segurança.",
+        )
     if srv_hash and srv_hash != uri_hash:
         raise HTTPException(status_code=409, detail=(
             f"MONGODB_URI aponta para outro cluster — a ação seria executada fora de "
             f"'{cluster_name}'. Ajuste o MONGODB_URI no .env do servidor."))
+
+
+_NAMESPACE_RE = re.compile(r"^[A-Za-z0-9_-]{1,63}\.[A-Za-z0-9_-]{1,120}$")
+_PROTECTED_DATABASES = {"admin", "config", "local"}
+
+
+def _assert_namespace_is_safe(namespace: str):
+    if not _NAMESPACE_RE.fullmatch(namespace):
+        raise HTTPException(status_code=400, detail="Namespace deve usar o formato database.collection.")
+    database = namespace.split(".", 1)[0].lower()
+    if database in _PROTECTED_DATABASES:
+        raise HTTPException(status_code=403, detail=f"Database protegido: {database}")
+
+
+_INDEX_FIELD_RE = re.compile(r"^(?:[A-Za-z_][A-Za-z0-9_-]*)(?:\.[A-Za-z_][A-Za-z0-9_-]*)*$")
+_INDEX_DIRECTIONS = {1, -1, "1", "-1", "hashed", "2dsphere", "text"}
+
+
+def _assert_index_keys_are_safe(index_keys: list[dict[str, int | str]]):
+    for key in index_keys:
+        if len(key) != 1:
+            raise HTTPException(status_code=400, detail="Cada chave de índice deve conter exatamente um campo.")
+        field, direction = next(iter(key.items()))
+        if not _INDEX_FIELD_RE.fullmatch(field):
+            raise HTTPException(status_code=400, detail="Campo de índice inválido.")
+        if direction not in _INDEX_DIRECTIONS:
+            raise HTTPException(status_code=400, detail="Direção/tipo de índice inválido.")
 
 
 _UNSAFE_FILTER_OPERATORS = {"$where", "$function", "$accumulator", "$expr"}
@@ -496,6 +572,7 @@ def explain_query(body: ExplainBody):
     if not uri:
         raise HTTPException(status_code=400, detail="MONGODB_URI não configurado no servidor.")
     _assert_uri_targets(body.project_id, body.cluster_name)
+    _assert_namespace_is_safe(body.namespace)
     _assert_filter_is_safe(body.filter)
     try:
         parts = body.namespace.split(".", 1)
@@ -523,6 +600,8 @@ def create_index(body: IndexBody):
     if not uri:
         raise HTTPException(status_code=400, detail="MONGODB_URI não configurado no servidor.")
     _assert_uri_targets(body.project_id, body.cluster_name)
+    _assert_namespace_is_safe(body.namespace)
+    _assert_index_keys_are_safe(body.index_keys)
     return {"result": create_index_direct(uri, body.namespace, body.index_keys)}
 
 
@@ -534,8 +613,8 @@ def cost(tier: str):
 
 # ── AI: analysis (stream) and chat (stream) ───────────────────────────────────
 class AnalyzeBody(BaseModel):
-    project_id: str
-    cluster_name: str
+    project_id: str = Field(..., min_length=1, max_length=128)
+    cluster_name: str = Field(..., min_length=1, max_length=128)
 
 @app.post("/api/analyze")
 def analyze(body: AnalyzeBody):
@@ -552,15 +631,49 @@ def analyze(body: AnalyzeBody):
             for chunk in analyze_cluster_stream(full_c, pa, sq, meas, cpu24):
                 yield chunk
         except Exception as e:
-            yield friendly_api_error(e)
+            yield _with_ai_recovery(friendly_api_error(e))
     return StreamingResponse(gen(), media_type="text/plain")
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=12_000)
+
+
 class ChatBody(BaseModel):
-    messages: list           # [{"role","content"}]
+    messages: list[ChatMessage] = Field(..., min_length=1, max_length=16)
     project_id: Optional[str] = None
     cluster_name: Optional[str] = None
     conversation_id: Optional[str] = None
+
+
+_OUT_OF_SCOPE_PATTERNS = (
+    "temperatura", "previsao do tempo", "previsão do tempo", "clima hoje",
+    "placar", "resultado do jogo", "receita culinaria", "receita culinária",
+    "horoscopo", "horóscopo",
+)
+
+
+def _is_obviously_out_of_scope(text: str) -> bool:
+    normalized = " ".join(text.lower().split())
+    return any(pattern in normalized for pattern in _OUT_OF_SCOPE_PATTERNS)
+
+
+def _scope_redirect() -> str:
+    return (
+        "Essa solicitação está fora do papel da Torre. Posso ajudar com clusters MongoDB Atlas, "
+        "métricas de CPU/memória/IOPS, Performance Advisor, Query Profiler, custo, health score "
+        "e recomendações de sizing baseadas nos dados disponíveis."
+    )
+
+
+def _with_ai_recovery(message: str) -> str:
+    return (
+        message
+        + "\n\nEnquanto o modelo se recupera, os painéis de Overview, Health Score, "
+        "Performance Advisor, Query Profiler, FinOps e Scale continuam disponíveis "
+        "com os dados determinísticos da Atlas Admin API."
+    )
 
 _chat_db_ready = False
 
@@ -597,6 +710,11 @@ def _chat_cluster_snapshot(client: AtlasClient, project_id: str, cluster_name: s
 
 @app.post("/api/chat")
 def chat(body: ChatBody):
+    messages = [message.model_dump() for message in body.messages]
+    user_msg = messages[-1]["content"]
+    if _is_obviously_out_of_scope(user_msg):
+        return StreamingResponse(iter([_scope_redirect()]), media_type="text/plain")
+
     # There is ALWAYS a system prompt (MongoDB Atlas anchor) — without it the model answers generically.
     system = build_chat_system_prompt()
     if body.project_id and body.cluster_name:
@@ -607,7 +725,6 @@ def chat(body: ChatBody):
     # Atlas persistence (best-effort — chat works even without MONGODB_URI)
     uri = os.getenv("MONGODB_URI", "")
     conv_id = body.conversation_id
-    user_msg = body.messages[-1].get("content", "") if body.messages else ""
     if uri and user_msg:
         try:
             from chat_memory import new_conversation, add_message
@@ -622,11 +739,11 @@ def chat(body: ChatBody):
     def gen():
         acc = []
         try:
-            for chunk in stream_chat(body.messages, system):
+            for chunk in stream_chat(messages, system):
                 acc.append(chunk)
                 yield chunk
         except Exception as e:
-            err = friendly_api_error(e)
+            err = _with_ai_recovery(friendly_api_error(e))
             acc.append(err)
             yield err
         if uri and conv_id:
@@ -642,10 +759,10 @@ def chat(body: ChatBody):
 
 # ── Analysis PDF report (MongoDB branding, Markdown fallback) ─────────────────
 class ReportBody(BaseModel):
-    cluster_name: str
-    analysis: str
-    health_score: Optional[int] = None
-    health_issues: Optional[list] = None
+    cluster_name: str = Field(..., min_length=1, max_length=128)
+    analysis: str = Field(..., min_length=1, max_length=100_000)
+    health_score: Optional[int] = Field(default=None, ge=0, le=100)
+    health_issues: Optional[list[str]] = Field(default=None, max_length=50)
 
 @app.post("/api/report")
 def report(body: ReportBody):
