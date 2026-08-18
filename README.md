@@ -1,38 +1,38 @@
 # Torre — Atlas Control Plane
 
-One screen for a whole MongoDB Atlas fleet, with a Claude assistant grounded in the real clusters — not generic MongoDB trivia. Ask whether an M30 is enough and it answers from *your* p95 CPU.
+Uma tela para uma frota inteira de MongoDB Atlas, com um assistente Claude ancorado nos clusters reais — e não em trivialidades genéricas sobre MongoDB. Pergunte se um M30 é suficiente e ele responde a partir do p95 de CPU *do seu* cluster.
 
-Everything comes from the Atlas Admin API v2. UI is in pt-BR; code and docs in English.
+Tudo vem da Atlas Admin API v2. A UI é em pt-BR; a documentação também, e o código segue em inglês.
 
-## The demo in 5 steps
+## A demo em 5 passos
 
-**1. Overview — the whole fleet in one snapshot.** Clusters, status, cost and alerts, without opening a dozen Atlas tabs.
+**1. Overview — a frota inteira em um instantâneo.** Clusters, status, custo e alertas, sem abrir uma dúzia de abas do Atlas.
 
-![Overview page: fleet snapshot with clusters, status, cost and alerts](docs/screenshots/01-overview.png)
+![Página Overview: instantâneo da frota com clusters, status, custo e alertas](docs/screenshots/01-overview.png)
 
-**2. Health Score — one number, and where it came from.** 0–100 built from Performance Advisor, COLLSCAN shapes, cluster status and MongoDB version, with the points broken out per component.
+**2. Health Score — um número, e de onde ele veio.** De 0 a 100, montado a partir do Performance Advisor, de shapes com COLLSCAN, do status do cluster e da versão do MongoDB, com os pontos abertos por componente.
 
-![Health Score of 100/100 with the per-component breakdown](docs/screenshots/02-health-score.png)
+![Health Score de 100/100 com o detalhamento por componente](docs/screenshots/02-health-score.png)
 
-**3. Scale — the tier answer, from data.** 24h CPU (p95/avg), memory, storage and connections, next to the cluster's native auto-scaling status and a tier simulator.
+**3. Scale — a resposta sobre o tier, a partir do dado.** CPU de 24h (p95/média), memória, armazenamento e conexões, ao lado do status nativo de auto-scaling do cluster e de um simulador de tier.
 
-![Scale page recommending a scale down from 24h CPU, memory and storage](docs/screenshots/03-scale.png)
+![Página Scale recomendando reduzir o tier a partir de CPU, memória e armazenamento de 24h](docs/screenshots/03-scale.png)
 
-**4. FinOps — the bill next to the utilization.** Current invoice from the Billing API, estimated cost per cluster, and a verdict per row.
+**4. FinOps — a conta ao lado da utilização.** Fatura atual pela Billing API, custo estimado por cluster e um veredito por linha.
 
-![FinOps table flagging an underused cluster and the possible saving](docs/screenshots/04-finops.png)
+![Tabela do FinOps apontando um cluster subutilizado e a economia possível](docs/screenshots/04-finops.png)
 
-**5. AI Chat — grounded in the fleet.** Streaming Claude with the cluster context attached, history persisted in Atlas.
+**5. Chat de IA — ancorado na frota.** Claude em streaming com o contexto do cluster anexado e histórico persistido no Atlas.
 
-![AI Chat answering a sizing question from real metrics, and refusing to invent the window it doesn't have](docs/screenshots/05-ai-chat.png)
+![Chat de IA respondendo uma pergunta de dimensionamento a partir de métricas reais, e se recusando a inventar a janela que não possui](docs/screenshots/05-ai-chat.png)
 
-Note what it does in that screenshot: asked about 24h, it says it only has the last 5 minutes and shows how to get the rest, instead of making a number up.
+Repare no que ele faz nesse screenshot: perguntado sobre 24h, ele diz que só tem os últimos 5 minutos e mostra como obter o resto, em vez de inventar um número.
 
-Also on the menu: **Performance Advisor** (suggested indexes, one-click creation via pymongo, Claude analysis, PDF export), **Query Profiler** (parsed slow queries with a real `explain('executionStats')`) and **Compare** (two clusters side by side).
+Também no menu: **Performance Advisor** (índices sugeridos, criação em um clique via pymongo, análise pelo Claude, exportação em PDF), **Query Profiler** (queries lentas parseadas com um `explain('executionStats')` real) e **Compare** (dois clusters lado a lado).
 
-> Screenshots run against a live Atlas org; project and cluster names are replaced with neutral ones.
+> Os screenshots rodam contra uma organização Atlas real; os nomes de projeto e cluster foram trocados por nomes neutros.
 
-## How it fits together
+## Como as peças se encaixam
 
 ```mermaid
 flowchart LR
@@ -45,18 +45,18 @@ flowchart LR
     CM --> DB[("Atlas cluster<br/>chat history")]
 ```
 
-Three deliberate choices:
+Três escolhas deliberadas:
 
-- **Credentials never leave the backend.** The frontend only talks to `/api`.
-- **The assistant is fenced in.** Scope is restricted to Atlas (an "M30" is a tier, never a Kubernetes cluster) and it must separate real API data from pattern-based recommendation.
-- **Cheap to keep open.** Reused HTTP session, TTL caches, and Anthropic prompt caching on the static system block plus a ~2-minute cluster snapshot. Token spend shows at `GET /api/metrics`.
+- **Credenciais nunca saem do backend.** O frontend só conversa com `/api`.
+- **O assistente é cercado.** O escopo é restrito ao Atlas (um "M30" é um tier, nunca um cluster Kubernetes) e ele precisa separar dado real da API de recomendação baseada em padrão.
+- **Barato de manter aberto.** Sessão HTTP reaproveitada, caches com TTL e cache de prompt da Anthropic sobre o bloco estático de sistema, mais um snapshot de cluster de ~2 minutos. O gasto de tokens aparece em `GET /api/metrics`.
 
-## Run it
+## Como rodar
 
-Needs Python 3.10+, Node 18+, an [Atlas Admin API key](https://www.mongodb.com/docs/atlas/configure-api-access/) and an Anthropic key.
+Precisa de Python 3.10+, Node 18+, uma [chave da Atlas Admin API](https://www.mongodb.com/docs/atlas/configure-api-access/) e uma chave da Anthropic.
 
 ```bash
-cp .env.example .env    # fill in the keys
+cp .env.example .env    # preencha as chaves
 ./run_react.sh          # API :8765, UI :5290
 ```
 
@@ -65,40 +65,44 @@ ATLAS_PUBLIC_KEY=
 ATLAS_PRIVATE_KEY=
 ATLAS_ORG_ID=
 ANTHROPIC_API_KEY=
-MONGODB_URI=                  # optional: index creation + chat history
-CLAUDE_MODEL=claude-sonnet-5  # optional
-API_AUTH_TOKEN=               # optional: protects the API
+MONGODB_URI=                  # opcional: criação de índices + histórico de chat
+CLAUDE_MODEL=claude-sonnet-5  # opcional
+API_AUTH_TOKEN=               # obrigatório quando exposto além do localhost
 ```
 
-Override ports with `API_PORT=8770 WEB_PORT=5295 ./run_react.sh`.
+Sobrescreva as portas com `API_PORT=8770 WEB_PORT=5295 ./run_react.sh`.
 
-Docker (nginx serves the build and proxies `/api`):
+Docker (nginx serve o build e faz proxy de `/api`):
 
 ```bash
 docker build -t torre . && docker run --env-file .env -p 18085:8080 torre
 ```
 
-## Tests
+## Testes
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-24 pure-logic tests — scaling heuristic, injection guards, chat-memory id validation. No credentials needed.
+27 testes de lógica pura — heurística de escala, guardas contra injeção em índices/caminhos, validação de id da memória de chat. Sem necessidade de credenciais.
 
-## Layout
+## Fronteira de produção
+
+Defina um `API_AUTH_TOKEN` longo e aleatório; ele protege as rotas da API e as métricas, enquanto o liveness continua público. Erros do Atlas são logados no servidor e sanitizados para os clientes, e definições de índice aceitam apenas um campo/direção seguro por chave. A imagem roda como UID 10001 atrás do nginx com cabeçalhos de segurança. Em ambientes compartilhados, prefira um IdP/API gateway real e saída privada até o Atlas.
+
+## Organização
 
 ```
-api.py              FastAPI routes, middleware, auth
-atlas_client.py     Admin API v2 client + scaling recommendations
-ai_agent.py         Claude analysis, chat, PDF (streaming)
-chat_memory.py      Chat history in Atlas
-observability.py    Structured logs + /api/metrics
-frontend/src/pages/ One component per page
+api.py              rotas FastAPI, middleware, autenticação
+atlas_client.py     cliente da Admin API v2 + recomendações de escala
+ai_agent.py         análise pelo Claude, chat, PDF (streaming)
+chat_memory.py      histórico de chat no Atlas
+observability.py    logs estruturados + /api/metrics
+frontend/src/pages/ um componente por página
 ```
 
-## Credits
+## Créditos
 
-Based on Maestro by [Carime](https://github.com/carimeb) ([maestro-atlas-landing-zone](https://github.com/carimeb/maestro-atlas-landing-zone)).
+Baseado no Maestro, de [Carime](https://github.com/carimeb) ([maestro-atlas-landing-zone](https://github.com/carimeb/maestro-atlas-landing-zone)).
 
-MIT — see [LICENSE](LICENSE).
+MIT — veja a [LICENSE](LICENSE).
