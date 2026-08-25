@@ -6,29 +6,17 @@ import { Leaf } from './components.jsx'
 import { getConfig, getClusters } from './api.js'
 
 const Overview = lazy(() => import('./pages/Overview.jsx'))
-const Clusters = lazy(() => import('./pages/Clusters.jsx'))
-const PerformanceAdvisor = lazy(() => import('./pages/PerformanceAdvisor.jsx'))
-const Profiler = lazy(() => import('./pages/Profiler.jsx'))
 const Scale = lazy(() => import('./pages/Scale.jsx'))
 const FinOps = lazy(() => import('./pages/FinOps.jsx'))
-const Compare = lazy(() => import('./pages/Compare.jsx'))
 const Health = lazy(() => import('./pages/Health.jsx'))
 const Chat = lazy(() => import('./pages/Chat.jsx'))
 
 const NAV = [
-  { section: 'Principal' },
   { id: 'overview', label: 'Visão Geral', icon: 'Dashboard', Comp: Overview },
-  { id: 'clusters', label: 'Clusters', icon: 'Database', Comp: Clusters },
-  { section: 'Performance' },
-  { id: 'pa', label: 'Performance Advisor', icon: 'LightningBolt', Comp: PerformanceAdvisor },
-  { id: 'profiler', label: 'Query Profiler', icon: 'MagnifyingGlass', Comp: Profiler },
-  { id: 'health', label: 'Health Score', icon: 'Gauge', Comp: Health },
-  { section: 'Operações' },
-  { id: 'scale', label: 'Scale', icon: 'Charts', Comp: Scale },
+  { id: 'health', label: 'Saúde', icon: 'Gauge', Comp: Health },
+  { id: 'scale', label: 'Escala', icon: 'Charts', Comp: Scale },
   { id: 'finops', label: 'FinOps', icon: 'Coin', Comp: FinOps },
-  { id: 'compare', label: 'Compare', icon: 'Diagram', Comp: Compare },
-  { section: 'IA' },
-  { id: 'chat', label: 'MongoDB Assistant', icon: 'Sparkle', Comp: Chat },
+  { id: 'chat', label: 'Assistente', icon: 'Sparkle', Comp: Chat },
 ]
 
 export default function App() {
@@ -48,7 +36,8 @@ export default function App() {
   const Current = NAV.find(n => n.id === active)?.Comp || Overview
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-pov-shell>
+      <a className="pov-skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
       <nav className="sidenav">
         <div className="sidenav-brand">
           <Leaf size={28} />
@@ -59,7 +48,7 @@ export default function App() {
         </div>
         {NAV.map((n, i) => n.section
           ? <div key={i} className="sidenav-section">{n.section}</div>
-          : <button key={n.id} className={`sidenav-item ${active === n.id ? 'active' : ''}`} onClick={() => setActive(n.id)}>
+          : <button key={n.id} className={`sidenav-item ${active === n.id ? 'active' : ''}`} aria-current={active === n.id ? 'page' : undefined} onClick={() => setActive(n.id)}>
               <Icon glyph={n.icon} size="large" role="presentation" />{n.label}
             </button>
         )}
@@ -71,7 +60,7 @@ export default function App() {
         )}
       </nav>
 
-      <main className="main">
+      <main id="conteudo-principal" tabIndex={-1} className="main">
         {loading && <Body style={{ color: 'var(--text-muted)' }}>Conectando ao MongoDB Atlas…</Body>}
         {error && <Banner variant="danger">Erro ao carregar: {error}</Banner>}
         {!loading && !error && config && (

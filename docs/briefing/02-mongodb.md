@@ -1,6 +1,6 @@
 # Torre — Atlas Control Plane — MongoDB e Atlas Admin API
 
-> Segundo dos três prompts. Aqui o MongoDB aparece em três papéis: o alvo da observação (via Admin API), a memória do assistente, e o destino da única ação direta que a ferramenta executa.
+> Segunda parte do briefing. Aqui o MongoDB aparece em três papéis: o alvo da observação (via Admin API), a memória do assistente, e o destino da única ação direta que a ferramenta executa.
 
 ---
 

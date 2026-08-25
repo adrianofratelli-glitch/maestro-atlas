@@ -1,6 +1,6 @@
 # Torre — Atlas Control Plane — arquitetura e princípios
 
-> Primeiro dos três prompts que eu uso pra levantar essa PoV do zero. O problema, a heurística que sustenta a credibilidade, a segurança e o assistente. Dado, índices e guardas em `02-mongodb.md`; tela e roteiro em `03-interface-fluxos.md`.
+> Primeira das três partes do briefing desta PoV. O problema, a heurística que sustenta a credibilidade, a segurança e o assistente. Dado, índices e guardas em `02-mongodb.md`; tela e roteiro em `03-interface-fluxos.md`.
 
 ---
 
@@ -81,7 +81,7 @@ Todo o resto é análise e recomendação.
 
 Três coisas que não são detalhe:
 
-- **Cache com TTL nas chamadas caras.** Descobrir qual processo é o primário de um cluster custa uma sequência de chamadas, e nove páginas pedindo isso a cada render transforma a Admin API no gargalo da própria ferramenta.
+- **Cache com TTL nas chamadas caras.** Descobrir qual processo é o primário de um cluster custa uma sequência de chamadas, e múltiplas visões pedindo isso a cada render transformam a Admin API no gargalo da própria ferramenta.
 - **Métrica vem do primário**, resolvido explicitamente — não do primeiro processo que a lista devolver.
 - **Ponto nulo é ponto nulo.** A Admin API devolve buracos nas séries; pega o último valor não-nulo em vez de assumir zero. Zero e "não reportou" são coisas diferentes, e tratar as duas igual produz uma recomendação de scale down linda e errada.
 

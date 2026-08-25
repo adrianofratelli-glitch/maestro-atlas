@@ -8,8 +8,8 @@ A regra que sustenta tudo: **o número vem da heurística determinística e test
 
 | Arquivo | O que responde |
 |---|---|
-| [`docs/prompts/01-arquitetura.md`](docs/prompts/01-arquitetura.md) | os seis módulos, a heurística de escala e a armadilha da janela de tempo, segurança da chave da Admin API, o único ponto de escrita, o assistente, como rodar, ordem de trabalho |
-| [`docs/prompts/02-mongodb.md`](docs/prompts/02-mongodb.md) | os três papéis do MongoDB aqui, os índices da memória de chat, as guardas de namespace/chave/filtro, explain e os seeds de carga |
-| [`docs/prompts/03-interface-fluxos.md`](docs/prompts/03-interface-fluxos.md) | as nove páginas, contrato de API, streaming do chat, roteiro de demo, nota de capturas |
+| [`docs/briefing/01-arquitetura.md`](docs/briefing/01-arquitetura.md) | os seis módulos, a heurística de escala e a armadilha da janela de tempo, segurança da chave da Admin API, o único ponto de escrita, o assistente, como rodar, ordem de trabalho |
+| [`docs/briefing/02-mongodb.md`](docs/briefing/02-mongodb.md) | os três papéis do MongoDB aqui, os índices da memória de chat, as guardas de namespace/chave/filtro, explain e os seeds de carga |
+| [`docs/briefing/03-interface-fluxos.md`](docs/briefing/03-interface-fluxos.md) | as cinco páginas primárias, contrato de API, streaming do chat, roteiro de demo, nota de capturas |
 
 Se for ler só um: o **01**, pela heurística. Se o LLM entrar antes dela existir, alguém deixa o modelo chutar o tier — e aí a ferramenta perde o argumento inteiro.
