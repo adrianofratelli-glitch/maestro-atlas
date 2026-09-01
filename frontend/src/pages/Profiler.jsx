@@ -6,6 +6,7 @@ import Badge from '@leafygreen-ui/badge'
 import { KpiGrid, Kpi, Section, Empty } from '../components.jsx'
 import { getSlow, explainQuery } from '../api.js'
 import { ClusterPicker } from './_picker.jsx'
+import QueryDetails from '../components/QueryDetails.jsx'
 
 const PLAN = { COLLSCAN: '🔴 COLLSCAN', IXSCAN: '🟢 IXSCAN', FETCH: '🟡 FETCH', SORT: '🟠 SORT', IDHACK: '🟢 IDHACK' }
 const WRITE_OPS = ['insert', 'update', 'remove', 'delete', 'findAndModify']
@@ -167,8 +168,16 @@ export default function Profiler({ clusters, config }) {
                           </Badge>
                           {ratioBad && <span style={{ fontSize: 12, color: '#ef4444', marginLeft: 10 }}>← índice provavelmente faltando</span>}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Query / comando:</div>
-                        <pre style={{ margin: 0, maxHeight: 200 }}>{JSON.stringify(r.filter, null, 2)}</pre>
+                        <QueryDetails
+                          operation={r.op}
+                          namespace={r.ns}
+                          query={r.filter}
+                          explain={expl?.key === key ? expl.data : {
+                            stage: r.planRaw, docs_examined: r.docs, keys_examined: r.keys,
+                            n_returned: r.ret, query_hash: r.queryHash,
+                          }}
+                          label="Ver query e plano capturado"
+                        />
                         {config.mongodb && sel.is_uri_target && r.kind === 'read' && !Array.isArray(r.filter) && (
                           <div style={{ marginTop: 12 }}>
                             <Button size="xsmall" disabled={expl?.busy} onClick={() => runExplain(key, r)}>

@@ -6,6 +6,7 @@ import Card from '@leafygreen-ui/card'
 import { Section, Empty } from '../components.jsx'
 import { getPA, createIndex, streamAnalyze, downloadReport } from '../api.js'
 import { ClusterPicker } from './_picker.jsx'
+import QueryDetails from '../components/QueryDetails.jsx'
 
 export default function PerformanceAdvisor({ clusters, config }) {
   const [sel, setSel] = useState(clusters[0])
@@ -70,7 +71,7 @@ export default function PerformanceAdvisor({ clusters, config }) {
                     impacto estimado {Math.round((idx.weight || 0) * 100) / 100}
                   </span>
                 </Body>
-                <pre>{cmd}</pre>
+                <QueryDetails operation="createIndex" namespace={ns} query={cmd} note="recomendação do Atlas Performance Advisor" />
                 {config.mongodb && sel.is_uri_target && (
                   <Button size="small" onClick={() => runIndex(i, ns, idx.index)}>▶ Executar Índice</Button>
                 )}
