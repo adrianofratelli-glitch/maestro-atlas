@@ -27,7 +27,17 @@ from pymongo.collection import Collection
 DB_NAME   = "torre"
 COLL_NAME = "chat_history"
 CHAT_MAX_MESSAGES = max(2, int(os.getenv("CHAT_MAX_MESSAGES", "100")))
-CHAT_RETENTION_DAYS = max(0, int(os.getenv("CHAT_RETENTION_DAYS", "30")))
+# TTL is mandatory — an unset or explicitly-zero CHAT_RETENTION_DAYS must not
+# mean "keep forever" (unbounded collection growth); it falls back to a sane
+# ceiling instead.
+CHAT_RETENTION_DAYS_DEFAULT = 90
+_retention_raw = os.getenv("CHAT_RETENTION_DAYS", "")
+try:
+    CHAT_RETENTION_DAYS = int(_retention_raw) if _retention_raw.strip() else CHAT_RETENTION_DAYS_DEFAULT
+except ValueError:
+    CHAT_RETENTION_DAYS = CHAT_RETENTION_DAYS_DEFAULT
+if CHAT_RETENTION_DAYS <= 0:
+    CHAT_RETENTION_DAYS = CHAT_RETENTION_DAYS_DEFAULT
 
 _clients: dict = {}
 
@@ -70,7 +80,18 @@ def init_db(mongo_uri: str):
     if "cluster_idx" not in existing:
         coll.create_index([("cluster", DESCENDING)], name="cluster_idx")
 
-    if CHAT_RETENTION_DAYS and "updated_at_ttl" not in existing:
+    # Composite index covering list_conversations' actual query shape:
+    # $match on cluster + $sort by updated_at desc, in one index instead of
+    # two separate single-field indexes.
+    if "cluster_updated_at_idx" not in existing:
+        coll.create_index(
+            [("cluster", 1), ("updated_at", DESCENDING)],
+            name="cluster_updated_at_idx",
+        )
+
+    # TTL is always active (see CHAT_RETENTION_DAYS default above) — the
+    # collection must never grow unbounded even if the env var is unset/0.
+    if "updated_at_ttl" not in existing:
         coll.create_index(
             [("updated_at", 1)],
             name="updated_at_ttl",

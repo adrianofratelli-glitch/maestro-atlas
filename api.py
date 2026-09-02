@@ -7,6 +7,7 @@ Credentials ALWAYS come from the environment (.env) — never from the frontend.
 Run with:  uvicorn api:app --reload --port 8765
 """
 
+import hashlib
 import json
 import hmac
 import logging
@@ -22,6 +23,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 import observability
 from atlas_client import (
@@ -83,14 +85,38 @@ def _cpu_24h_stats(client: AtlasClient, project_id: str, process_id: str) -> Opt
 
 
 # ── Atlas client (singleton built from the environment) ───────────────────────
+# One AtlasClient (and its requests.Session, with the Digest Auth handshake
+# state) reused across every request in the process — rebuilding it per-request
+# was defeating the session pooling the client promises. Rebuilt only if the
+# env credentials actually change (simple hash check); otherwise a process
+# restart is what picks up new credentials, which is fine for a local PoV.
+_client_singleton: Optional[AtlasClient] = None
+_client_singleton_key: Optional[str] = None
+
+
+def _client_credentials_key() -> str:
+    raw = "|".join([
+        os.getenv("ATLAS_PUBLIC_KEY", ""),
+        os.getenv("ATLAS_PRIVATE_KEY", ""),
+        os.getenv("ATLAS_ORG_ID", ""),
+        os.getenv("ATLAS_PROJECT_ID", ""),
+    ])
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def get_client() -> AtlasClient:
+    global _client_singleton, _client_singleton_key
     pub  = os.getenv("ATLAS_PUBLIC_KEY", "")
     priv = os.getenv("ATLAS_PRIVATE_KEY", "")
     org  = os.getenv("ATLAS_ORG_ID", "")
     proj = os.getenv("ATLAS_PROJECT_ID", "")
     if not (pub and priv and (org or proj)):
         raise HTTPException(status_code=503, detail="Credenciais Atlas ausentes no servidor (.env).")
-    return AtlasClient(pub, priv, org, proj)
+    key = _client_credentials_key()
+    if _client_singleton is None or _client_singleton_key != key:
+        _client_singleton = AtlasClient(pub, priv, org, proj)
+        _client_singleton_key = key
+    return _client_singleton
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -213,7 +239,14 @@ def config():
 
 # ── Clusters ──────────────────────────────────────────────────────────────────
 @app.get("/api/clusters")
-def list_clusters():
+async def list_clusters():
+    # _list_clusters_sync does synchronous network I/O (requests, not httpx) —
+    # offload to the threadpool so it doesn't block the Uvicorn worker's
+    # event loop for the whole duration of the Atlas API round-trips.
+    return await run_in_threadpool(_list_clusters_sync)
+
+
+def _list_clusters_sync():
     client = get_client()
     rows = []
     uri_hash = _uri_cluster_hash()
@@ -397,7 +430,13 @@ def health(project_id: str, cluster_name: str, status: str = "", mongo_version: 
 
 
 @app.get("/api/finops")
-def finops():
+async def finops():
+    # Same reasoning as list_clusters: run the whole synchronous, thread-pooled
+    # evaluation off the event loop so the worker isn't blocked waiting on it.
+    return await run_in_threadpool(_finops_sync)
+
+
+def _finops_sync():
     """Evaluates cost efficiency (estimated cost vs. 24h average CPU) per cluster."""
     client = get_client()
     try:
@@ -602,7 +641,7 @@ def create_index(body: IndexBody):
     _assert_uri_targets(body.project_id, body.cluster_name)
     _assert_namespace_is_safe(body.namespace)
     _assert_index_keys_are_safe(body.index_keys)
-    return {"result": create_index_direct(uri, body.namespace, body.index_keys)}
+    return create_index_direct(uri, body.namespace, body.index_keys)
 
 
 # ── Cost / estimate ───────────────────────────────────────────────────────────

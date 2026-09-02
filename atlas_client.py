@@ -1,10 +1,48 @@
 import logging
+import random
 import time
 import requests
+from functools import wraps
 from requests.auth import HTTPDigestAuth
 from typing import Optional
 
 logger = logging.getLogger("torre.atlas_client")
+
+# ── Rate-limit resilience (Atlas Admin API: ~100 req/min per API key/org) ──
+# Centralized retry wrapper for every outbound HTTP call: on 429, honor
+# Retry-After if present, otherwise short exponential backoff + jitter.
+# Propagates the exception only after exhausting attempts.
+_RATE_LIMIT_MAX_ATTEMPTS = 3
+_RATE_LIMIT_BASE_DELAY_S = 1.0
+
+
+def _with_rate_limit_retry(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        attempt = 0
+        while True:
+            try:
+                return fn(*args, **kwargs)
+            except requests.HTTPError as e:
+                resp = e.response
+                if resp is None or resp.status_code != 429 or attempt >= _RATE_LIMIT_MAX_ATTEMPTS - 1:
+                    raise
+                retry_after = resp.headers.get("Retry-After")
+                if retry_after:
+                    try:
+                        delay = float(retry_after)
+                    except ValueError:
+                        delay = _RATE_LIMIT_BASE_DELAY_S * (2 ** attempt)
+                else:
+                    delay = _RATE_LIMIT_BASE_DELAY_S * (2 ** attempt)
+                delay += random.uniform(0, 0.25)
+                logger.warning(
+                    "Atlas Admin API 429 — tentativa %d/%d, aguardando %.2fs",
+                    attempt + 1, _RATE_LIMIT_MAX_ATTEMPTS, delay,
+                )
+                time.sleep(delay)
+                attempt += 1
+    return wrapper
 
 ATLAS_BASE = "https://cloud.mongodb.com/api/atlas/v2"
 ATLAS_HEADERS = {
@@ -77,6 +115,7 @@ class AtlasClient:
         cache[key] = (time.monotonic() + ttl, value)
 
     # ── HTTP helpers ──────────────────────────────────────────────────────
+    @_with_rate_limit_retry
     def _get(self, path, params=None):
         r = self.session.get(
             f"{ATLAS_BASE}{path}", auth=self.auth,
@@ -85,6 +124,7 @@ class AtlasClient:
         r.raise_for_status()
         return r.json()
 
+    @_with_rate_limit_retry
     def _patch(self, path, body):
         r = self.session.patch(
             f"{ATLAS_BASE}{path}", auth=self.auth,
@@ -105,9 +145,31 @@ class AtlasClient:
         if self.project_id:
             result = [self._get(f"/groups/{self.project_id}")]
         else:
-            result = self._get("/groups", params={"itemsPerPage": 500}).get("results", [])
+            result = self._get_all_pages("/groups", params={"itemsPerPage": 500})
         self._cache_put(self._projects_cache, key, result, self._LISTING_TTL)
         return result
+
+    def _get_all_pages(self, path, params=None):
+        """Follows the Admin API's `links` envelope (rel=next) until it stops
+        offering a next page — otherwise orgs with more results than fit on
+        one page silently get truncated (e.g. >500 projects)."""
+        params = dict(params or {})
+        params.setdefault("pageNum", 1)
+        results = []
+        page = params["pageNum"]
+        while True:
+            params["pageNum"] = page
+            data = self._get(path, params=params)
+            page_results = data.get("results", [])
+            if not page_results:
+                break
+            results.extend(page_results)
+            links = data.get("links", []) or []
+            has_next = any(l.get("rel") == "next" for l in links)
+            if not has_next:
+                break
+            page += 1
+        return results
 
     # ── Clusters ──────────────────────────────────────────────────────────
     def get_clusters(self, project_id):
@@ -543,8 +605,13 @@ class AtlasClient:
 
 
 # ── Direct pymongo index creation (requires connection string) ─────────────
-def create_index_direct(mongo_uri: str, namespace: str, index_keys: list) -> str:
-    """Creates an index directly via pymongo. Retries once on replica state change."""
+def create_index_direct(mongo_uri: str, namespace: str, index_keys: list) -> dict:
+    """Creates an index directly via pymongo. Retries once on replica state change.
+
+    Returns a dict {"result": str, "collection_stats": dict|None} so callers
+    (and the frontend) can surface a "collection has N documents — build may
+    take a while" warning before/after the operation.
+    """
     try:
         from pymongo import MongoClient
         from pymongo.errors import OperationFailure
@@ -563,24 +630,46 @@ def create_index_direct(mongo_uri: str, namespace: str, index_keys: list) -> str
         mc        = MongoClient(mongo_uri, serverSelectionTimeoutMS=6000)
 
         try:
+            # Best-effort collStats: lets the UI warn about build impact on
+            # large collections before/after the index creation.
+            coll_stats = None
+            try:
+                stats = mc[db_name].command("collStats", coll_name)
+                coll_stats = {
+                    "count": stats.get("count", 0),
+                    "size_bytes": stats.get("size", 0),
+                    "storage_size_bytes": stats.get("storageSize", 0),
+                }
+            except Exception:
+                logger.exception("collStats failed namespace=%s", namespace)
+
             for attempt in range(2):
                 try:
                     name = mc[db_name][coll_name].create_index(keys)
-                    return f"✅ Índice criado: `{name}`"
+                    msg = f"✅ Índice criado: `{name}`"
+                    if coll_stats and coll_stats["count"] > 100_000:
+                        msg += (f"\n\n⚠️ Coleção com **{coll_stats['count']:,}** documentos — "
+                                f"o build do índice pode levar algum tempo.")
+                    return {"result": msg, "collection_stats": coll_stats}
                 except OperationFailure as e:
                     if e.code == 11602 and attempt == 0:
                         # Primary election in progress — wait and retry once
                         import time; time.sleep(3)
                         continue
-                    return (
-                        f"❌ Erro MongoDB ({e.code}): {e.details.get('errmsg', str(e))}\n\n"
-                        f"**Dica:** O cluster pode estar em processo de eleição de primário. "
-                        f"Aguarde ~30s e tente novamente."
-                    )
-            return "❌ Falha após retry. Tente novamente em alguns instantes."
+                    return {
+                        "result": (
+                            f"❌ Erro MongoDB ({e.code}): {e.details.get('errmsg', str(e))}\n\n"
+                            f"**Dica:** O cluster pode estar em processo de eleição de primário. "
+                            f"Aguarde ~30s e tente novamente."
+                        ),
+                        "collection_stats": coll_stats,
+                    }
+            return {"result": "❌ Falha após retry. Tente novamente em alguns instantes.",
+                    "collection_stats": coll_stats}
         finally:
             mc.close()
     except ImportError:
-        return "❌ pymongo não instalado. Execute: pip install pymongo"
+        return {"result": "❌ pymongo não instalado. Execute: pip install pymongo",
+                "collection_stats": None}
     except Exception as e:
-        return f"❌ Erro de conexão: {e}"
+        return {"result": f"❌ Erro de conexão: {e}", "collection_stats": None}
