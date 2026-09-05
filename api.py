@@ -15,6 +15,7 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
 from typing import Literal, Optional
 from uuid import uuid4
 
@@ -215,11 +216,13 @@ def api_liveness():
 
 # ── MongoDB (cached client — connection pool reused across requests) ──────────
 _mongo_clients: dict = {}
+_mongo_clients_lock = Lock()
 
 def _mongo(uri: str):
     from pymongo import MongoClient
-    if uri not in _mongo_clients:
-        _mongo_clients[uri] = MongoClient(uri, serverSelectionTimeoutMS=6000)
+    with _mongo_clients_lock:
+        if uri not in _mongo_clients:
+            _mongo_clients[uri] = MongoClient(uri, serverSelectionTimeoutMS=6000)
     return _mongo_clients[uri]
 
 

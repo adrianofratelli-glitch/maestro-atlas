@@ -19,6 +19,7 @@ Structure:
 
 from datetime import datetime, timezone
 import os
+from threading import Lock
 from typing import List, Dict, Optional
 from bson import ObjectId
 from pymongo import MongoClient, TEXT, DESCENDING
@@ -40,6 +41,7 @@ if CHAT_RETENTION_DAYS <= 0:
     CHAT_RETENTION_DAYS = CHAT_RETENTION_DAYS_DEFAULT
 
 _clients: dict = {}
+_clients_lock = Lock()
 
 
 def _oid(conversation_id: str) -> ObjectId:
@@ -53,8 +55,9 @@ def _oid(conversation_id: str) -> ObjectId:
 
 # ── Connection ────────────────────────────────────────────────────────────────
 def _get_collection(mongo_uri: str) -> Collection:
-    if mongo_uri not in _clients:
-        _clients[mongo_uri] = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
+    with _clients_lock:
+        if mongo_uri not in _clients:
+            _clients[mongo_uri] = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
     return _clients[mongo_uri][DB_NAME][COLL_NAME]
 
 
