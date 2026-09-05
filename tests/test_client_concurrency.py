@@ -36,3 +36,20 @@ class ClientConcurrencyTests(unittest.TestCase):
                 self.assertTrue(all(handle is handles[0] for handle in handles))
         finally:
             module._clients.clear()
+
+class AtlasClientConcurrencyTests(unittest.TestCase):
+    def test_atlas_client_cold_start_constructs_one_session(self):
+        import api
+        barrier = Barrier(8)
+        shared = MagicMock()
+        def construct(*args):
+            time.sleep(0.03)
+            return shared
+        def acquire(_):
+            barrier.wait(timeout=5)
+            return api.get_client()
+        with patch.object(api, '_client_singleton', None), patch.object(api, '_client_singleton_key', None), patch.dict(os.environ, {'ATLAS_PUBLIC_KEY':'test', 'ATLAS_PRIVATE_KEY':'test', 'ATLAS_ORG_ID':'test'}), patch.object(api, 'AtlasClient', side_effect=construct) as constructor:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                handles = list(executor.map(acquire, range(8)))
+            self.assertEqual(constructor.call_count, 1)
+            self.assertTrue(all(handle is shared for handle in handles))

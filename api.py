@@ -93,6 +93,7 @@ def _cpu_24h_stats(client: AtlasClient, project_id: str, process_id: str) -> Opt
 # restart is what picks up new credentials, which is fine for a local PoV.
 _client_singleton: Optional[AtlasClient] = None
 _client_singleton_key: Optional[str] = None
+_atlas_client_lock = Lock()
 
 
 def _client_credentials_key() -> str:
@@ -107,17 +108,18 @@ def _client_credentials_key() -> str:
 
 def get_client() -> AtlasClient:
     global _client_singleton, _client_singleton_key
-    pub  = os.getenv("ATLAS_PUBLIC_KEY", "")
-    priv = os.getenv("ATLAS_PRIVATE_KEY", "")
-    org  = os.getenv("ATLAS_ORG_ID", "")
-    proj = os.getenv("ATLAS_PROJECT_ID", "")
-    if not (pub and priv and (org or proj)):
-        raise HTTPException(status_code=503, detail="Credenciais Atlas ausentes no servidor (.env).")
-    key = _client_credentials_key()
-    if _client_singleton is None or _client_singleton_key != key:
-        _client_singleton = AtlasClient(pub, priv, org, proj)
-        _client_singleton_key = key
-    return _client_singleton
+    with _atlas_client_lock:
+        pub  = os.getenv("ATLAS_PUBLIC_KEY", "")
+        priv = os.getenv("ATLAS_PRIVATE_KEY", "")
+        org  = os.getenv("ATLAS_ORG_ID", "")
+        proj = os.getenv("ATLAS_PROJECT_ID", "")
+        if not (pub and priv and (org or proj)):
+            raise HTTPException(status_code=503, detail="Credenciais Atlas ausentes no servidor (.env).")
+        key = _client_credentials_key()
+        if _client_singleton is None or _client_singleton_key != key:
+            _client_singleton = AtlasClient(pub, priv, org, proj)
+            _client_singleton_key = key
+        return _client_singleton
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
