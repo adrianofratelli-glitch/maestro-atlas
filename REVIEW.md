@@ -49,3 +49,15 @@ Nenhum import/referência estática a `_shared/grove_client.py` foi encontrado n
 ## Segunda rodada — melhorias adicionais
 
 Criação do cliente Atlas e sua requests.Session protegida por lock, inclusive renovação por credenciais; cache MongoDB já corrigido anteriormente. 34 testes passaram, incluindo cold start concorrente do cliente Atlas. Nenhuma chamada à Admin API/LLM foi realizada.
+
+
+## Fechamento final — 2026-09-05
+
+Esta seção atualiza o estado dos achados históricos acima.
+
+- Aplicado/reavaliado: Sem alteração nova de runtime; sincronização do singleton Atlas/Session já corrigida anteriormente.
+- Validação: 34 testes; npm sem achados.
+- Propostas e limites restantes: Renovação dinâmica de credenciais continua proposta de lifecycle: evita credencial antiga, mas exige invalidar pool sem interromper requests. Starlette 0.52.1 → ≥1.3.1: elimina advisories, mas exige compatibilidade FastAPI/core. Redimensionamento, criação de índices e chamadas LLM reais não executados; são validações externas pendentes, não provas substituídas por mocks.
+- pip-audit atual: starlette 0.52.1: PYSEC-2026-161, PYSEC-2026-249, PYSEC-2026-248, PYSEC-2026-2281, PYSEC-2026-2280
+- Ambiente: pip 26.2.1 nos ambientes que possuem pip; FinScope mantém uv sem pip. Essa atualização local não altera arquivos de dependências das PoVs.
+- `_shared`: nenhum importador estático comprovado nesta PoV; apenas smoke consome o helper no inventário.
