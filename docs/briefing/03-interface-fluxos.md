@@ -111,3 +111,8 @@ O repositório é público e os nomes reais de projeto e cluster **identificam u
 - `populate_workload.py` e `populate_profiler.py` rodados, senão duas páginas ficam vazias.
 - Uma pergunta de aquecimento no chat, pra pagar o cold start fora da demo.
 - Nomes de cliente já substituídos, se for capturar tela.
+
+
+## Comportamento de resiliência integrado
+
+Liberar leitor HTTP quando consumidor abandona o iterador e concluir decodificação UTF-8 no EOF. A implementação vigente está em `main`; consulte o estado atual de `../../REVIEW.md` para validação e propostas não aplicadas.

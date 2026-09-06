@@ -1,3 +1,5 @@
+> Estado vigente: melhoria `2e0815c` aprovada pelo usuário e integrada em `main`. As menções abaixo a aprovação pendente são históricas. As propostas de core/schema/dataset continuam sem aplicação.
+
 # Revisão de engenharia e design — torre-atlas-control-plane
 
 ## Resultado
