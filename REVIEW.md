@@ -61,3 +61,13 @@ Esta seção atualiza o estado dos achados históricos acima.
 - pip-audit atual: starlette 0.52.1: PYSEC-2026-161, PYSEC-2026-249, PYSEC-2026-248, PYSEC-2026-2281, PYSEC-2026-2280
 - Ambiente: pip 26.2.1 nos ambientes que possuem pip; FinScope mantém uv sem pip. Essa atualização local não altera arquivos de dependências das PoVs.
 - `_shared`: nenhum importador estático comprovado nesta PoV; apenas smoke consome o helper no inventário.
+
+
+## Homologação de resiliência e UI
+
+- Melhoria: Liberar leitor HTTP quando consumidor abandona o iterador e concluir decodificação UTF-8 no EOF.
+- Isolamento: `review/codex-homologation`, baseada no HEAD `888c62b`. Correção interna elegível para merge após testes.
+- Validação: build passou; UI offline em 1440×1000, 768×1024 e 360×800 sem pageerror nem overflow horizontal; skip link transfere foco. 1 testes novos de transporte/polling neste repositório. As suítes locais anteriores foram reexecutadas; resultados consolidados no vault PoVs-Handoffs.
+- Limite: teste offline/fixture não certifica cenário real completo nem ausência de bugs. Não houve alteração de schema, dataset ou dependência core.
+- Propostas preservadas: Renovação dinâmica de credenciais continua proposta de lifecycle: evita credencial antiga, mas exige invalidar pool sem interromper requests. Starlette 0.52.1 → ≥1.3.1: elimina advisories, mas exige compatibilidade FastAPI/core. Redimensionamento, criação de índices e chamadas LLM reais não executados; são validações externas pendentes, não provas substituídas por mocks.
+- `_shared` e daemon do portal não foram alterados nesta rodada.

@@ -44,11 +44,20 @@ async function* streamPost(url, payload, onResponse) {
   }
   onResponse?.(res)
   const reader = res.body.getReader()
-  const dec = new TextDecoder()
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    yield dec.decode(value, { stream: true })
+  try {
+    const dec = new TextDecoder()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        const tail = dec.decode()
+        if (tail) yield tail
+        break
+      }
+      yield dec.decode(value, { stream: true })
+    }
+  } finally {
+    reader.cancel().catch(() => {})
+    reader.releaseLock()
   }
 }
 
